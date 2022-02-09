@@ -1,15 +1,17 @@
 import telebot
 from pyowm import OWM
 import pickle
+import os
 import datetime as d
 import cconverter as cc
 import configparser
+import googleAPI as gg
 
 config = configparser.ConfigParser()
 config.read('settings.ini')
 token = config['token']['bot']
 
-
+# Со
 def save_users(type):
     if type == 'admin':
         with open('admins.pickle', 'wb') as f:
@@ -60,8 +62,41 @@ def telegram_bot(token):
     def start_message(message):
         bot.send_message(message.chat.id, 'Пожалуйста авторизуйтесь')
 
+    @bot.message_handler(content_types=['document'])
+
+    def table(message):
+        """
+                Обрабатывает документ формата .xlsx
+        """
+        if (message.chat.id in admins_list) == True or (message.chat.id in users_list) == True:
+            try:
+                chat_id = message.chat.id
+                file_info = bot.get_file(message.document.file_id)
+                print(file_info)
+                downloaded_file = bot.download_file(file_info.file_path)
+
+                src = '/Users/maksimpiven/PycharmProjects/tg_bot/' + message.document.file_name
+                filename, file_extension = os.path.splitext(src)
+                if file_extension == '.xlsx':
+                    with open(src, 'wb') as new_file:
+                        new_file.write(downloaded_file)
+                    bot.reply_to(message, "Пожалуй, я сохраню это")
+            except Exception as e:
+                bot.reply_to(message, e)
+                file_extension = ''
+            if file_extension == '.xlsx':
+                gg.prog(message.document.file_name)
+                with open('result.xlsx', 'rb') as file:
+                    bot.send_document(message.chat.id, file)
+            else:
+                bot.reply_to(message, 'Неправильный формат файла')
+
     @bot.message_handler(commands=['shutdown'])
+
     def stop_bot(message, force=False):
+        """
+                Выключает бота
+        """
         if check_auth(message.chat.id, 'admin') == True or force == True:
             bot.send_message(message.chat.id, "Бот наелся и ложится спать")
             print('Бот ложится')
@@ -75,6 +110,9 @@ def telegram_bot(token):
 
     @bot.message_handler(commands=['currencies'])
     def currency(message):
+        """
+                Показывает актуальный курс валют
+        """
         if (message.chat.id in admins_list) == True or (message.chat.id in users_list) == True:
             today = d.datetime.today()
             bot.send_message(message.chat.id, f"Время проверки: {today.strftime('%Y-%m-%d-%H.%M.%S')}\n"
@@ -85,6 +123,9 @@ def telegram_bot(token):
 
     @bot.message_handler(commands=['weather'])
     def weather(message):
+        """
+                Показывает актуальную погоду
+        """
         if (message.chat.id in admins_list) == True or (message.chat.id in users_list) == True:
             appid = config['weather']['id']
             owm = OWM(appid)
@@ -102,6 +143,9 @@ def telegram_bot(token):
 
     @bot.message_handler(commands=['ops'])
     def ops(message):
+        """
+                Показывает залогиненных юзеров и админов
+        """
         if (message.chat.id in admins_list):
             bot.send_message(message.chat.id, f"Список админов: {admins_list}\n"
                                               f"Список юзеров: {users_list}")
@@ -112,6 +156,9 @@ def telegram_bot(token):
 
     @bot.message_handler(commands=['help'])
     def helper(message):
+        """
+                Показывает список доступных комманд
+        """
         if (message.chat.id in admins_list):
             bot.send_message(message.chat.id, "Перечень доступных комманд:\n"
                                               "/weather - показывает актуальную погоду в Москве\n"
@@ -128,7 +175,9 @@ def telegram_bot(token):
             bot.send_message(message.chat.id, 'Пожалуйста авторизуйтесь')
     @bot.message_handler(content_types=['text'])
     def send_text(message):
-
+        """
+                Обрабатывает сообщения
+        """
         if message.text.lower() == "привет":
             bot.send_message(message.chat.id, "Хай буде так хлопчik")
 
@@ -141,7 +190,6 @@ def telegram_bot(token):
                 print('Добавлен в список админов.', message.chat.id)
             else:
                 bot.send_message(message.chat.id, "Ты уже в списке админов")
-
         elif message.text.lower() == config.get('tg', 'user'):
             if check_auth(message.chat.id, 'user') == False:
                 users_list.append(message.chat.id)
@@ -155,7 +203,6 @@ def telegram_bot(token):
                 bot.send_message(message.chat.id, "Не розумiю")
             else:
                 start_message(message)
-
     bot.polling()
 
 
