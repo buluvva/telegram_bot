@@ -72,9 +72,7 @@ def telegram_bot(token):
             try:
                 chat_id = message.chat.id
                 file_info = bot.get_file(message.document.file_id)
-                print(file_info)
                 downloaded_file = bot.download_file(file_info.file_path)
-
                 src = '/Users/maksimpiven/PycharmProjects/tg_bot/' + message.document.file_name
                 filename, file_extension = os.path.splitext(src)
                 if file_extension == '.xlsx':
